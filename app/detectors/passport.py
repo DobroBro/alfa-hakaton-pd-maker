@@ -5,7 +5,8 @@ from app.settings import RULES
 from app.types import PRIORITY, Span
 
 _SERIES_WORDS = tuple(RULES.get("series_number_words", []))
-_WORD_WORDS = [w for w in _SERIES_WORDS if w != "№"]
+_LETTER_SERIES = tuple(w for w in _SERIES_WORDS if w != "№")
+_WORD_WORDS = list(_LETTER_SERIES)
 _WORD = r"(?:\b(?:" + "|".join(_WORD_WORDS) + r")\b|№)"
 
 _PASSPORT_RE = re.compile(
@@ -41,10 +42,13 @@ def _has_foreign_prefix(folded: str, idx: int) -> bool:
     return False
 
 
-def _scan_weak_number(text: str, start: int) -> Span | None:
+def _scan_weak_number(text: str, folded: str, start: int) -> Span | None:
     pos = start
     words_skipped = 0
+    limit = start + 30
     while pos < len(text):
+        if pos >= limit:
+            return None
         ch = text[pos]
         if ch in " \t:,":
             pos += 1
@@ -54,9 +58,10 @@ def _scan_weak_number(text: str, start: int) -> Span | None:
         if words_skipped < 2:
             matched = False
             for w in _SERIES_WORDS:
-                if text.startswith(w, pos) and (
-                    pos == 0 or not text[pos - 1].isalpha()
-                ) and (pos + len(w) >= len(text) or not text[pos + len(w)].isalpha()):
+                wf = w.casefold().replace("ё", "е")
+                if folded.startswith(wf, pos) and (
+                    pos == 0 or not folded[pos - 1].isalpha()
+                ) and (pos + len(wf) >= len(folded) or not folded[pos + len(wf)].isalpha()):
                     pos += len(w)
                     words_skipped += 1
                     matched = True
@@ -64,6 +69,8 @@ def _scan_weak_number(text: str, start: int) -> Span | None:
             if matched:
                 continue
         break
+    if pos >= limit:
+        return None
     digits = []
     positions = []
     i = pos
@@ -86,6 +93,15 @@ def _scan_weak_number(text: str, start: int) -> Span | None:
             break
     if len(digits) < 6:
         return None
+    if i < len(text):
+        if text[i].isdigit():
+            return None
+        if text[i] == " ":
+            j = i
+            while j < len(text) and text[j] == " ":
+                j += 1
+            if j < len(text) and text[j].isdigit() and (j - i) == 1:
+                return None
     if _is_phone(digits):
         return None
     return Span(positions[0], positions[-1] + 1, "passport", PRIORITY["passport"])
@@ -93,18 +109,20 @@ def _scan_weak_number(text: str, start: int) -> Span | None:
 
 def _find_weak(text: str, folded: str) -> list[Span]:
     spans = []
-    idx = 0
-    while True:
-        idx = folded.find("паспорт", idx)
-        if idx == -1:
-            break
-        left_ok = idx == 0 or not folded[idx - 1].isalpha()
-        right_ok = idx + len("паспорт") >= len(folded) or not folded[idx + len("паспорт")].isalpha()
-        if left_ok and right_ok and not _has_foreign_prefix(folded, idx):
-            span = _scan_weak_number(text, idx + len("паспорт"))
-            if span is not None:
-                spans.append(span)
-        idx += len("паспорт")
+    for key in _PASSPORT_KEYS:
+        kf = key.casefold().replace("ё", "е")
+        idx = 0
+        while True:
+            idx = folded.find(kf, idx)
+            if idx == -1:
+                break
+            left_ok = idx == 0 or not folded[idx - 1].isalpha()
+            right_ok = idx + len(kf) >= len(folded) or not folded[idx + len(kf)].isalpha()
+            if left_ok and right_ok and not _has_foreign_prefix(folded, idx):
+                span = _scan_weak_number(text, folded, idx + len(kf))
+                if span is not None:
+                    spans.append(span)
+            idx += len(kf)
     return spans
 
 
@@ -114,9 +132,8 @@ def find(text: str) -> list[Span]:
     for m in _PASSPORT_RE.finditer(text):
         start, end = m.start(), m.end()
         has_passport = has_keyword(folded, start, end, _PASSPORT_KEYS, 40)
-        has_series = has_keyword(folded, start, end, ("серия",), 40)
-        has_number = has_keyword(folded, start, end, ("номер",), 40)
-        if has_passport or (has_series and has_number):
+        has_series = all(has_keyword(folded, start, end, (w,), 40) for w in _LETTER_SERIES)
+        if has_passport or has_series:
             spans.append(Span(start, end, "passport", PRIORITY["passport"]))
     spans.extend(_find_weak(text, folded))
     return spans
