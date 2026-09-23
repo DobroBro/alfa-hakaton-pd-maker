@@ -8,18 +8,14 @@ _WORD_RE = re.compile(
     r"(?<![A-Za-zА-Яа-яЁё])[A-Za-zА-Яа-яЁё]{2,}(?:-[A-Za-zА-Яа-яЁё]{2,})?(?![A-Za-zА-Яа-яЁё])"
 )
 
-_PERSONAL_KEYS = (
-    "фио", "клиент", "заявитель", "гражданин", "гражданка", "держатель",
-    "фамилия", "имя", "отчество",
-)
-_LABELS = ("фамилия", "имя", "отчество", "клиент", "держатель")
+_PERSONAL_KEYS = tuple(RULES.get("personal_keys", []))
 _POET_STOP = tuple(RULES.get("poet_stop", []))
 _SURNAMES = tuple(GAZETTEER.get("surnames", []))
 
 _PATR_SUFFIXES = ("ович", "евич", "овна", "евна", "ична")
 
 _NON_NAME_WORDS = tuple(RULES.get("fio_non_name", []))
-_CARD_WORDS = ("карта", "карты")
+_CARD_WORDS = tuple(RULES.get("fio_card_words", []))
 
 _INITIALS_RE = re.compile(
     r"(?<![A-Za-zА-Яа-яЁё])[A-Za-zА-Яа-яЁё]{2,}(?:-[A-Za-zА-Яа-яЁё]{2,})?\s+"
@@ -44,7 +40,7 @@ def _is_fio_window(folded: str, text: str, span_start: int, words: list[str]) ->
     has_key = has_keyword_left(folded, span_start, _PERSONAL_KEYS, 40)
     if not has_patr and not has_key:
         return False
-    if any(w.casefold().replace("ё", "е") in _LABELS for w in words):
+    if any(w.casefold().replace("ё", "е") in _PERSONAL_KEYS for w in words):
         return False
     if any(w.casefold().replace("ё", "е") in _POET_STOP for w in words):
         return False
@@ -96,7 +92,7 @@ def find(text: str) -> list[Span]:
     i = 0
     while i < len(words):
         s0, e0, w0 = words[i]
-        if w0.casefold().replace("ё", "е") in _LABELS:
+        if w0.casefold().replace("ё", "е") in _PERSONAL_KEYS:
             i += 1
             continue
         if i + 2 < len(words):

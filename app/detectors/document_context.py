@@ -1,13 +1,9 @@
 import re
 
+from app.settings import RULES
 from app.types import PRIORITY, Span
 
-_MARKERS = [
-    ("гражданство", "citizenship"),
-    ("кем выдан", "passport_issuer"),
-    ("орган", "passport_issuer"),
-    ("место рождения", "birth_place"),
-]
+_MARKERS = [(m["marker"], m["type"]) for m in RULES.get("document_markers", [])]
 
 _DATE_RE = re.compile(r"\d{1,2}[./-]\d{1,2}[./-]\d{2,4}|\d{4}[./-]\d{1,2}[./-]\d{1,2}")
 

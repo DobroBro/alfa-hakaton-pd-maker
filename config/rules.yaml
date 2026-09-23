@@ -23,3 +23,71 @@ fio_non_name:
   - получает
   - проживает
   - зарегистрирован
+personal_keys:
+  - фио
+  - клиент
+  - клиентка
+  - заявитель
+  - заявительница
+  - гражданин
+  - гражданка
+  - держатель
+  - фамилия
+  - имя
+  - отчество
+fio_card_words:
+  - карта
+  - карты
+cardholder_keys:
+  - держатель
+  - cardholder
+cardholder_filler:
+  - карты
+  - карта
+cvv_keys:
+  - cvv
+  - cvc
+  - cvv2
+  - cvc2
+  - код безопасности
+cvv_amex_keys:
+  - amex
+pin_keys:
+  - пин-код
+  - пинкод
+  - пин
+  - pin
+department_code_keys:
+  - код подразделения
+  - к/п
+foreign_passport_keys:
+  - загранпаспорт
+  - заграничный паспорт
+birth_date_keys:
+  - дата рождения
+  - родился
+  - родилась
+  - д.р.
+passport_issue_keys:
+  - дата выдачи
+  - выдан
+  - выдана
+driver_keys:
+  - водительск
+  - в/у
+  - ву №
+passport_keys:
+  - паспорт
+series_number_words:
+  - серия
+  - номер
+  - №
+document_markers:
+  - marker: гражданство
+    type: citizenship
+  - marker: кем выдан
+    type: passport_issuer
+  - marker: орган
+    type: passport_issuer
+  - marker: место рождения
+    type: birth_place

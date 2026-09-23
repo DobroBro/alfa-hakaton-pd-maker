@@ -1,10 +1,11 @@
 import re
 
 from app.context import has_keyword
+from app.settings import RULES
 from app.types import PRIORITY, Span
 
 _DEPT_RE = re.compile(r"\b\d{3}-\d{3}\b")
-_KEYS = ("код подразделения", "к/п")
+_KEYS = tuple(RULES.get("department_code_keys", []))
 
 
 def find(text: str) -> list[Span]:

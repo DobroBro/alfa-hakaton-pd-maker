@@ -1,10 +1,11 @@
 import re
 
 from app.context import has_keyword
+from app.settings import RULES
 from app.types import PRIORITY, Span
 
 _FP_RE = re.compile(r"(?<!\d)\d{2}\s?\d{7}(?!\d)")
-_KEYS = ("загранпаспорт", "заграничный паспорт")
+_KEYS = tuple(RULES.get("foreign_passport_keys", []))
 
 
 def find(text: str) -> list[Span]:

@@ -1,9 +1,12 @@
 import re
 
 from app.context import closest_key_end, has_keyword, has_keyword_prefix
+from app.settings import RULES
 from app.types import PRIORITY, Span
 
-_WORD = r"(?:\b(?:серия|номер)\b|№)"
+_SERIES_WORDS = tuple(RULES.get("series_number_words", []))
+_WORD_WORDS = [w for w in _SERIES_WORDS if w != "№"]
+_WORD = r"(?:\b(?:" + "|".join(_WORD_WORDS) + r")\b|№)"
 
 _DRIVER_RE = re.compile(
     rf"(?<!\d)(?:"
@@ -13,8 +16,8 @@ _DRIVER_RE = re.compile(
     rf")(?!\d)"
 )
 
-_DRIVER_KEYS = ("водительск", "в/у", "ву №")
-_PASSPORT_KEYS = ("паспорт",)
+_DRIVER_KEYS = tuple(RULES.get("driver_keys", []))
+_PASSPORT_KEYS = tuple(RULES.get("passport_keys", []))
 
 
 def find(text: str) -> list[Span]:

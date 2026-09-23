@@ -1,13 +1,14 @@
 import re
 
+from app.settings import RULES
 from app.types import PRIORITY, Span
 
 _WORD_RE = re.compile(
     r"(?<![A-Za-zА-Яа-яЁё])[A-Za-zА-Яа-яЁё]{2,}(?:-[A-Za-zА-Яа-яЁё]{2,})?(?![A-Za-zА-Яа-яЁё])"
 )
 
-_KEYS = ("держатель", "cardholder")
-_FILLER = ("карты", "карта")
+_KEYS = tuple(RULES.get("cardholder_keys", []))
+_FILLER = tuple(RULES.get("cardholder_filler", []))
 
 
 def find(text: str) -> list[Span]:

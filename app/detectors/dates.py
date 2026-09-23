@@ -1,10 +1,11 @@
 import re
 
 from app.context import has_keyword
+from app.settings import RULES
 from app.types import PRIORITY, Span
 
-_BIRTH_KEYS = ("дата рождения", "родился", "родилась", "д.р.")
-_ISSUE_KEYS = ("дата выдачи", "выдан", "выдана")
+_BIRTH_KEYS = tuple(RULES.get("birth_date_keys", []))
+_ISSUE_KEYS = tuple(RULES.get("passport_issue_keys", []))
 
 _NUM_RE = re.compile(
     r"(?<!\d)(?:\d{1,2}[./-]\d{1,2}[./-]\d{2,4}|\d{4}[./-]\d{1,2}[./-]\d{1,2})(?!\d)"
