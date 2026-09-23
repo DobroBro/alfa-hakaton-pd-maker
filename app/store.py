@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -39,13 +40,14 @@ class MemoryStore:
         with self._guard:
             self._data[payload_id] = Record(original=original, masked=masked)
 
-    def acquire_lock(self, payload_id: str, timeout: float):
+    async def acquire_lock(self, payload_id: str, timeout: float):
         with self._guard:
             lock = self._locks.get(payload_id)
             if lock is None:
                 lock = threading.Lock()
                 self._locks[payload_id] = lock
-        if lock.acquire(timeout=timeout):
+        acquired = await asyncio.to_thread(lock.acquire, timeout)
+        if acquired:
             return _MemoryLock(lock)
         return None
 
@@ -92,7 +94,7 @@ class RedisStore:
         raw = crypto.encrypt(self._key, obj, payload_id)
         self._redis.set(f"pd:{payload_id}", raw, ex=STORE_TTL_SECONDS)
 
-    def acquire_lock(self, payload_id: str, timeout: float):
+    async def acquire_lock(self, payload_id: str, timeout: float):
         deadline = time.monotonic() + timeout
         while True:
             token = os.urandom(16).hex()
@@ -101,7 +103,7 @@ class RedisStore:
                 return _RedisLock(self._redis, self._lock_script, f"lock:{payload_id}", token)
             if time.monotonic() >= deadline:
                 return None
-            time.sleep(0.01)
+            await asyncio.sleep(0.01)
 
 
 def create_store():

@@ -8,24 +8,18 @@ _PASSPORT_FORM1 = re.compile(r"\d{2}\s?\d{2}\s?\d{6}")
 _PASSPORT_FORM2 = re.compile(r"\d{4}\s?\d{6}")
 
 
-def _clean(raw: str) -> str:
-    return "".join(ch for ch in raw if ch.isdigit())
-
-
-def _is_passport_form(raw: str) -> bool:
+def _is_passport_form(raw: str, digits: str) -> bool:
     if " " not in raw:
         return False
-    digits = _clean(raw)
     if len(digits) != 10:
         return False
     return bool(_PASSPORT_FORM1.fullmatch(raw)) or bool(_PASSPORT_FORM2.fullmatch(raw))
 
 
-def _is_phone(raw: str) -> bool:
-    digits = _clean(raw)
+def _is_phone(raw: str, digits: str) -> bool:
     if len(digits) not in (10, 11):
         return False
-    if _is_passport_form(raw):
+    if _is_passport_form(raw, digits):
         return False
     if len(digits) == 11 and digits[0] in "78":
         return True
@@ -47,18 +41,24 @@ def find(text: str) -> list[Span]:
         run = text[start:end]
         if len(run) > 19 and all(ch.isdigit() for ch in run):
             continue
-        i = start
-        while i < end:
-            if not text[i].isdigit():
-                i += 1
-                continue
+        dpos = [i for i in range(start, end) if text[i].isdigit()]
+        n = len(dpos)
+        i = 0
+        while i < n:
+            d0 = dpos[i]
             found = False
-            for k in range(min(end, i + 30), i, -1):
-                if _is_phone(text[i:k]) and _bounded(text, i, k):
-                    spans.append(Span(i, k, "phone", PRIORITY["phone"]))
-                    i = k
-                    found = True
-                    break
+            for cnt in (11, 10):
+                j = i + cnt
+                if j <= n:
+                    d1 = dpos[j - 1]
+                    if d1 - d0 + 1 <= 30:
+                        raw = text[d0:d1 + 1]
+                        digits = "".join(text[p] for p in dpos[i:j])
+                        if _is_phone(raw, digits) and _bounded(text, d0, d1 + 1):
+                            spans.append(Span(d0, d1 + 1, "phone", PRIORITY["phone"]))
+                            i = j
+                            found = True
+                            break
             if not found:
                 i += 1
     return spans

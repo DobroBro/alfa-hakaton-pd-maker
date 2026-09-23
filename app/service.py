@@ -19,12 +19,12 @@ class Service:
             return self._profiles.get("checker")
         return self._profiles.get(system_id)
 
-    def process(self, payload: str, payload_id: str, profile: Profile) -> str:
+    async def process(self, payload: str, payload_id: str, profile: Profile) -> str:
         if not self._limiter.try_acquire():
             self._log_event("rate_limited", payload_id, profile.name)
             raise RateLimited
         try:
-            lock = self._acquire_lock(payload_id, profile.name)
+            lock = await self._acquire_lock(payload_id, profile.name)
             if lock is None:
                 self._log_event("rate_limited", payload_id, profile.name)
                 raise RateLimited
@@ -51,9 +51,9 @@ class Service:
         finally:
             self._limiter.release()
 
-    def _acquire_lock(self, payload_id: str, system: str):
+    async def _acquire_lock(self, payload_id: str, system: str):
         try:
-            return self._store.acquire_lock(payload_id, timeout=2.0)
+            return await self._store.acquire_lock(payload_id, timeout=2.0)
         except Exception as exc:  # noqa: BLE001
             self._log_store_error(exc)
             self._log_event("store_unavailable", payload_id, system)

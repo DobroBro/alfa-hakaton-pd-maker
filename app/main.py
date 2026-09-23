@@ -92,7 +92,7 @@ async def process(request: Request):
             return JSONResponse(status_code=403, content={"detail": "system_disabled"})
 
         try:
-            result = _service.process(payload, payload_id, profile)
+            result = await _service.process(payload, payload_id, profile)
         except RateLimited:
             metrics.http_requests_total.labels(path, "429").inc()
             return JSONResponse(
