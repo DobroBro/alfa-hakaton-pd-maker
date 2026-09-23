@@ -31,9 +31,7 @@ def _is_phone(raw: str) -> bool:
         return True
     if len(digits) == 10 and digits[0] == "9":
         return True
-    if len(digits) == 10 and any(ch in raw for ch in " -()"):
-        return True
-    return False
+    return len(digits) == 10 and any(ch in raw for ch in " -()")
 
 
 def _bounded(text: str, i: int, k: int) -> bool:

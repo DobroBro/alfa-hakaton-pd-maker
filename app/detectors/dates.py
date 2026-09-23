@@ -49,9 +49,7 @@ def _valid(parts: list[str]) -> bool:
         return 1 <= b <= 12 and 1 <= c <= 31
     if 1 <= b <= 12 and 1 <= a <= 31:
         return True
-    if 1 <= a <= 12 and 1 <= b <= 31:
-        return True
-    return False
+    return 1 <= a <= 12 and 1 <= b <= 31
 
 
 def _date_type(folded: str, start: int, end: int) -> str:

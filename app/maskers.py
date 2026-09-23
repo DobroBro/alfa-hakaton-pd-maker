@@ -1,6 +1,3 @@
-import re
-
-
 def star_digits(fragment: str, keep: set[int]) -> str:
     chars = list(fragment)
     for i, ch in enumerate(chars):

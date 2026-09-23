@@ -1,11 +1,9 @@
 import json
 import logging
-import time
 
 from app import metrics, pipeline
 from app.limiter import InFlightLimiter
 from app.profiles import Profile
-from app.store import MemoryStore, RedisStore
 
 logger = logging.getLogger("pd")
 
@@ -24,22 +22,14 @@ class Service:
     def process(self, payload: str, payload_id: str, profile: Profile) -> str:
         if not self._limiter.try_acquire():
             self._log_event("rate_limited", payload_id, profile.name)
-            raise RateLimited()
+            raise RateLimited
         try:
-            try:
-                lock = self._store.acquire_lock(payload_id, timeout=2.0)
-            except Exception:
-                self._log_event("store_unavailable", payload_id, profile.name)
-                raise StoreUnavailable()
+            lock = self._acquire_lock(payload_id, profile.name)
             if lock is None:
                 self._log_event("rate_limited", payload_id, profile.name)
-                raise RateLimited()
+                raise RateLimited
             try:
-                try:
-                    record = self._store.get(payload_id)
-                except Exception:
-                    self._log_event("store_unavailable", payload_id, profile.name)
-                    raise StoreUnavailable()
+                record = self._get_record(payload_id, profile.name)
                 if record is not None:
                     if record.original == payload:
                         self._log_event("retry", payload_id, profile.name)
@@ -51,11 +41,7 @@ class Service:
                     return record.masked
                 spans = pipeline.detect(payload, profile)
                 masked = pipeline.apply(payload, spans, profile.mask_style)
-                try:
-                    self._store.set(payload_id, original=payload, masked=masked)
-                except Exception:
-                    self._log_event("store_unavailable", payload_id, profile.name)
-                    raise StoreUnavailable()
+                self._store_pair(payload_id, payload, masked, profile.name)
                 self._log_masked(payload_id, profile.name, spans)
                 for s in spans:
                     metrics.pii_detected_total.labels(s.type).inc()
@@ -64,6 +50,30 @@ class Service:
                 self._release_lock(lock)
         finally:
             self._limiter.release()
+
+    def _acquire_lock(self, payload_id: str, system: str):
+        try:
+            return self._store.acquire_lock(payload_id, timeout=2.0)
+        except Exception as exc:  # noqa: BLE001
+            self._log_store_error(exc)
+            self._log_event("store_unavailable", payload_id, system)
+            raise StoreUnavailable from None
+
+    def _get_record(self, payload_id: str, system: str):
+        try:
+            return self._store.get(payload_id)
+        except Exception as exc:  # noqa: BLE001
+            self._log_store_error(exc)
+            self._log_event("store_unavailable", payload_id, system)
+            raise StoreUnavailable from None
+
+    def _store_pair(self, payload_id: str, original: str, masked: str, system: str) -> None:
+        try:
+            self._store.set(payload_id, original=original, masked=masked)
+        except Exception as exc:  # noqa: BLE001
+            self._log_store_error(exc)
+            self._log_event("store_unavailable", payload_id, system)
+            raise StoreUnavailable from None
 
     def _release_lock(self, lock) -> None:
         release = getattr(lock, "release", None)
@@ -74,6 +84,14 @@ class Service:
         logger.info(
             json.dumps(
                 {"event": event, "payload_id": payload_id, "system": system},
+                ensure_ascii=False,
+            )
+        )
+
+    def _log_store_error(self, exc: Exception) -> None:
+        logger.error(
+            json.dumps(
+                {"event": "store_error", "error_type": type(exc).__name__},
                 ensure_ascii=False,
             )
         )

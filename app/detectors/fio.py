@@ -56,9 +56,7 @@ def _is_fio_window(folded: str, text: str, span_start: int, words: list[str]) ->
         for w in words:
             if w.casefold().replace("ё", "е") in _SURNAMES:
                 return False
-    if has_stop_context(folded, span_start, span_start, _POET_STOP):
-        return False
-    return True
+    return not has_stop_context(folded, span_start, span_start, _POET_STOP)
 
 
 def _single_word_after_key(text: str, folded: str) -> list[Span]:
@@ -88,9 +86,7 @@ def _initials_ok(folded: str, text: str, start: int, end: int) -> bool:
     if has_key:
         return True
     name_word = span_words[-1]
-    if name_word.casefold().replace("ё", "е") in _SURNAMES:
-        return False
-    return True
+    return name_word.casefold().replace("ё", "е") not in _SURNAMES
 
 
 def find(text: str) -> list[Span]:
@@ -106,18 +102,20 @@ def find(text: str) -> list[Span]:
         if i + 2 < len(words):
             s1, e1, w1 = words[i + 1]
             s2, e2, w2 = words[i + 2]
-            if _spaces_only(text, e0, s1) and _spaces_only(text, e1, s2):
-                if _is_fio_window(folded, text, s0, [w0, w1, w2]):
-                    spans.append(Span(s0, e2, "fio", PRIORITY["fio"]))
-                    i += 3
-                    continue
+            if (
+                _spaces_only(text, e0, s1)
+                and _spaces_only(text, e1, s2)
+                and _is_fio_window(folded, text, s0, [w0, w1, w2])
+            ):
+                spans.append(Span(s0, e2, "fio", PRIORITY["fio"]))
+                i += 3
+                continue
         if i + 1 < len(words):
             s1, e1, w1 = words[i + 1]
-            if _spaces_only(text, e0, s1):
-                if _is_fio_window(folded, text, s0, [w0, w1]):
-                    spans.append(Span(s0, e1, "fio", PRIORITY["fio"]))
-                    i += 2
-                    continue
+            if _spaces_only(text, e0, s1) and _is_fio_window(folded, text, s0, [w0, w1]):
+                spans.append(Span(s0, e1, "fio", PRIORITY["fio"]))
+                i += 2
+                continue
         i += 1
     for m in _INITIALS_RE.finditer(text):
         if _initials_ok(folded, text, m.start(), m.end()):

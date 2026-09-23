@@ -14,3 +14,20 @@ from app.detectors import (
     phone,
     secrets,
 )
+
+__all__ = [
+    "address",
+    "card",
+    "cardholder",
+    "dates",
+    "department_code",
+    "document_context",
+    "driver_license",
+    "email",
+    "fio",
+    "foreign_passport",
+    "inn",
+    "passport",
+    "phone",
+    "secrets",
+]

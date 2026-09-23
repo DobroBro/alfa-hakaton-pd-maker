@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import threading
 import time
@@ -6,6 +7,8 @@ from dataclasses import dataclass
 
 from app import crypto
 from app.settings import REDIS_URL, STORE, STORE_TTL_SECONDS
+
+logger = logging.getLogger("pd")
 
 
 @dataclass
@@ -57,8 +60,13 @@ class _RedisLock:
     def release(self) -> None:
         try:
             self._script(keys=[self._key], args=[self._token])
-        except Exception:
-            pass
+        except Exception as exc:  # noqa: BLE001
+            logger.error(
+                json.dumps(
+                    {"event": "lock_release_error", "error_type": type(exc).__name__},
+                    ensure_ascii=False,
+                )
+            )
 
 
 class RedisStore:

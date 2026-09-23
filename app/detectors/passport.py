@@ -6,11 +6,11 @@ from app.types import PRIORITY, Span
 _WORD = r"(?:\b(?:серия|номер)\b|№)"
 
 _PASSPORT_RE = re.compile(
-    r"(?<!\d)(?:"
-    r"(?:{w}\s*)?\d{{2}}\s*(?:{w}\s*)?\d{{2}}\s*(?:{w}\s*)?\d{{6}}"
-    r"|"
-    r"(?:{w}\s*)?\d{{4}}\s*(?:{w}\s*)?\d{{6}}"
-    r")(?!\d)".format(w=_WORD)
+    rf"(?<!\d)(?:"
+    rf"(?:{_WORD}\s*)?\d{{2}}\s*(?:{_WORD}\s*)?\d{{2}}\s*(?:{_WORD}\s*)?\d{{6}}"
+    rf"|"
+    rf"(?:{_WORD}\s*)?\d{{4}}\s*(?:{_WORD}\s*)?\d{{6}}"
+    rf")(?!\d)"
 )
 
 

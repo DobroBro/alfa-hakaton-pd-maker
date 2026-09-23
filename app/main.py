@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse, Response
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
+from pydantic import ValidationError
 
 from app import metrics
 from app.logging_setup import setup_logging
@@ -68,7 +69,7 @@ async def process(request: Request):
             return JSONResponse(status_code=400, content={"detail": "bad_request"})
         try:
             data = ProcessRequest.model_validate_json(body)
-        except Exception:
+        except (ValidationError, json.JSONDecodeError):
             metrics.http_requests_total.labels(path, "400").inc()
             return JSONResponse(status_code=400, content={"detail": "bad_request"})
 
@@ -103,7 +104,13 @@ async def process(request: Request):
             metrics.store_errors_total.inc()
             metrics.http_requests_total.labels(path, "500").inc()
             return JSONResponse(status_code=500, content={"detail": "store_unavailable"})
-        except Exception:
+        except Exception as exc:  # noqa: BLE001
+            logger.error(
+                json.dumps(
+                    {"event": "internal_error", "error_type": type(exc).__name__},
+                    ensure_ascii=False,
+                )
+            )
             metrics.http_requests_total.labels(path, "500").inc()
             return JSONResponse(status_code=500, content={"detail": "internal_error"})
 

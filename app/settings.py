@@ -14,21 +14,18 @@ STORE_TTL_SECONDS = 1800
 
 
 def load_systems() -> dict:
-    with open(CONFIG_DIR / "systems.yaml", "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f)
-    return data
+    with open(CONFIG_DIR / "systems.yaml", encoding="utf-8") as f:
+        return yaml.safe_load(f)
 
 
 def load_gazetteer() -> dict:
-    with open(CONFIG_DIR / "gazetteer.yaml", "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f)
-    return data
+    with open(CONFIG_DIR / "gazetteer.yaml", encoding="utf-8") as f:
+        return yaml.safe_load(f)
 
 
 def load_rules() -> dict:
-    with open(CONFIG_DIR / "rules.yaml", "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f)
-    return data
+    with open(CONFIG_DIR / "rules.yaml", encoding="utf-8") as f:
+        return yaml.safe_load(f)
 
 
 SYSTEMS_CONFIG = load_systems()

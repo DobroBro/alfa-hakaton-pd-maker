@@ -3,7 +3,7 @@ import logging
 
 from app import detectors
 from app.maskers import mask_fragment
-from app.types import FREE_TEXT_TYPES, PRIORITY, STRUCTURAL_TYPES, Span
+from app.types import PRIORITY, STRUCTURAL_TYPES, Span
 
 logger = logging.getLogger("pd")
 
@@ -95,7 +95,7 @@ def detect(text: str, profile) -> list[Span]:
     for name, finder in DETECTORS:
         try:
             spans += finder(text)
-        except Exception as exc:
+        except Exception as exc:  # noqa: BLE001
             logger.error(
                 json.dumps(
                     {
