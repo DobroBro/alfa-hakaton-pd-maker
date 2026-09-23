@@ -1,0 +1,66 @@
+openapi: 3.0.3
+info:
+  title: PD Masker API
+  version: 1.0.0
+  description: Сервис маскирования персональных данных.
+paths:
+  /process:
+    post:
+      summary: Обработать строку
+      description: |
+        Логика пары по payload_id:
+        - Записи нет: замаскировать payload, сохранить пару, вернуть маску.
+        - Запись есть и payload равен сохранённому оригиналу: вернуть сохранённую маску (ретрай).
+        - Запись есть и payload не равен оригиналу: вернуть сохранённый оригинал, если у профиля demask_enabled: true, иначе снова маску.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [payload, payload_id]
+              properties:
+                payload:
+                  type: string
+                  description: Строка для обработки.
+                payload_id:
+                  type: string
+                  description: Идентификатор пары.
+      responses:
+        "200":
+          description: Успешная обработка.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [result]
+                properties:
+                  result:
+                    type: string
+        "429":
+          description: Слишком много запросов.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        "4XX":
+          description: Ошибка запроса.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string
+        "5XX":
+          description: Внутренняя ошибка.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  detail:
+                    type: string

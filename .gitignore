@@ -1,0 +1,11 @@
+.venv/
+venv/
+.idea/
+.pytest_cache/
+__pycache__/
+*.pyc
+.DS_Store
+dist/
+build/
+htmlcov/
+*.zip

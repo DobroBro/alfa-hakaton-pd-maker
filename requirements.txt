@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+pydantic>=2
+orjson
+redis>=5
+cryptography
+prometheus-client
+pyyaml

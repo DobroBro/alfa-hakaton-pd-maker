@@ -1,0 +1,28 @@
+default_system: checker
+store_ttl_seconds: 1800
+max_in_flight: 512
+systems:
+  checker:
+    enabled: true
+    demask_enabled: true
+    mask_style: reference
+    combo_rules: false
+    types: all
+  crm:
+    enabled: true
+    demask_enabled: true
+    mask_style: reference
+    combo_rules: true
+    types: [fio, birth_date, phone, email, passport, address, card_number, cvv, pin]
+  analytics:
+    enabled: false
+    demask_enabled: false
+    mask_style: reference
+    combo_rules: true
+    types: []
+  vault:
+    enabled: true
+    demask_enabled: true
+    mask_style: token
+    combo_rules: false
+    types: all

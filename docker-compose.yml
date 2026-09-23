@@ -1,0 +1,15 @@
+services:
+  redis:
+    image: redis:7
+    command: ["redis-server", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      STORE: redis
+      REDIS_URL: redis://redis:6379/0
+      PD_STORE_KEY: ${PD_STORE_KEY}
+      MAX_IN_FLIGHT: 512
+    depends_on:
+      - redis

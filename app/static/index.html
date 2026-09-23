@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PD Masker — демо</title>
+<style>
+  body { font-family: -apple-system, "Segoe UI", Roboto, sans-serif; margin: 0; background: #f5f6f8; color: #1c1e21; }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 32px 20px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: #6b7280; font-size: 13px; margin-bottom: 24px; }
+  textarea { width: 100%; box-sizing: border-box; min-height: 90px; padding: 12px; font-size: 14px;
+    border: 1px solid #d1d5db; border-radius: 8px; resize: vertical; }
+  .row { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  button { padding: 10px 18px; font-size: 14px; border: none; border-radius: 8px; cursor: pointer; }
+  .primary { background: #1a73e8; color: #fff; }
+  .secondary { background: #e5e7eb; color: #111827; }
+  .out { margin-top: 16px; background: #fff; border: 1px solid #d1d5db; border-radius: 8px; padding: 14px; }
+  .out .label { font-size: 12px; color: #6b7280; margin-bottom: 6px; }
+  .out pre { margin: 0; white-space: pre-wrap; word-break: break-word; font-size: 14px; }
+  .metrics { margin-top: 24px; background: #fff; border: 1px solid #d1d5db; border-radius: 8px; padding: 16px; }
+  .metrics h2 { font-size: 15px; margin: 0 0 4px; }
+  .metrics .note { font-size: 12px; color: #6b7280; margin-bottom: 12px; }
+  .metrics .grid { display: flex; gap: 24px; flex-wrap: wrap; }
+  .metrics .col { min-width: 220px; }
+  .metrics h3 { font-size: 13px; margin: 0 0 6px; color: #374151; }
+  .metrics table { border-collapse: collapse; font-size: 13px; }
+  .metrics td { padding: 2px 12px 2px 0; }
+  .metrics td:last-child { text-align: right; font-variant-numeric: tabular-nums; }
+  .err { color: #b91c1c; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>PD Masker</h1>
+  <div class="sub">Маскирование персональных данных и обратное чтение по payload_id</div>
+
+  <textarea id="input" placeholder="Клиент Иванов Иван Иванович, паспорт 4509 123456"></textarea>
+
+  <div class="row">
+    <button class="primary" id="maskBtn">Маскировать</button>
+    <button class="secondary" id="demaskBtn">Вернуть исходный</button>
+  </div>
+
+  <div class="out">
+    <div class="label">Ответ</div>
+    <pre id="output">—</pre>
+  </div>
+
+  <div class="metrics">
+    <h2>Счётчики процесса</h2>
+    <div class="note">При четырёх воркерах видны счётчики воркера, который ответил на запрос.</div>
+    <div class="grid">
+      <div class="col">
+        <h3>Ответы по кодам</h3>
+        <table id="codes"></table>
+      </div>
+      <div class="col">
+        <h3>Обнаружено ПД по типам</h3>
+        <table id="pii"></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let currentId = null;
+  let currentMask = null;
+
+  async function post(payload, payloadId) {
+    const res = await fetch('process', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ payload, payload_id: payloadId }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || ('HTTP ' + res.status));
+    return data.result;
+  }
+
+  async function mask() {
+    const text = document.getElementById('input').value;
+    if (!text) { document.getElementById('output').textContent = 'Введите текст'; return; }
+    currentId = 'demo-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+    try {
+      currentMask = await post(text, currentId);
+      document.getElementById('output').textContent = currentMask;
+    } catch (e) {
+      document.getElementById('output').textContent = 'Ошибка: ' + e.message;
+    }
+  }
+
+  async function demask() {
+    const text = document.getElementById('input').value;
+    if (!currentId) { document.getElementById('output').textContent = 'Сначала нажмите «Маскировать»'; return; }
+    let payload;
+    if (currentMask && currentMask !== text) {
+      payload = currentMask;
+    } else {
+      payload = text + ' ';
+    }
+    try {
+      const result = await post(payload, currentId);
+      document.getElementById('output').textContent = result;
+    } catch (e) {
+      document.getElementById('output').textContent = 'Ошибка: ' + e.message;
+    }
+  }
+
+  async function refreshMetrics() {
+    try {
+      const res = await fetch('metrics');
+      const text = await res.text();
+      const codes = {};
+      const pii = {};
+      for (const line of text.split('\n')) {
+        if (line.startsWith('http_requests_total{')) {
+          const m = line.match(/code="([^"]+)"/);
+          const v = line.split(' ').pop();
+          if (m) codes[m[1]] = parseInt(v, 10) || 0;
+        } else if (line.startsWith('pii_detected_total{')) {
+          const m = line.match(/type="([^"]+)"/);
+          const v = line.split(' ').pop();
+          if (m) pii[m[1]] = parseInt(v, 10) || 0;
+        }
+      }
+      const codesEl = document.getElementById('codes');
+      codesEl.innerHTML = Object.entries(codes).map(([k, v]) =>
+        '<tr><td>' + k + '</td><td>' + v + '</td></tr>').join('') || '<tr><td>—</td></tr>';
+      const piiEl = document.getElementById('pii');
+      piiEl.innerHTML = Object.entries(pii).map(([k, v]) =>
+        '<tr><td>' + k + '</td><td>' + v + '</td></tr>').join('') || '<tr><td>—</td></tr>';
+    } catch (e) {
+      document.getElementById('codes').innerHTML = '<tr><td>—</td></tr>';
+      document.getElementById('pii').innerHTML = '<tr><td>—</td></tr>';
+    }
+  }
+
+  document.getElementById('maskBtn').addEventListener('click', mask);
+  document.getElementById('demaskBtn').addEventListener('click', demask);
+  refreshMetrics();
+  setInterval(refreshMetrics, 3000);
+</script>
+</body>
+</html>
